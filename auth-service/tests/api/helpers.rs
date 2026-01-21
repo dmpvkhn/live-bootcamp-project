@@ -1,0 +1,83 @@
+use auth_service::model::*;
+use auth_service::Application;
+use reqwest::Client;
+
+pub struct TestApp {
+    pub address: String,
+    pub http_client: reqwest::Client,
+}
+
+impl TestApp {
+    pub async fn new() -> Self {
+        let app = Application::build("127.0.0.1:0")
+            .await
+            .expect("Failed to build app");
+
+        let address = format!("http://{}", app.address.clone());
+
+        #[allow(clippy::let_underscore_future)]
+        let _ = tokio::spawn(app.run());
+
+        let http_client = Client::new();
+
+        // Create new `TestApp` instance and return it
+        Self {
+            address,
+            http_client,
+        }
+    }
+
+    pub async fn get_root(&self) -> reqwest::Response {
+        self.http_client
+            .get(format!("{}/", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn post_signup(&self, request: signup::SignUPRequest) -> reqwest::Response {
+        self.http_client
+            .post(format!("{}/signup", &self.address))
+            .json(&request)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+    pub async fn post_login(&self, request: login::LoginRequest) -> reqwest::Response {
+        self.http_client
+            .post(format!("{}/login", &self.address))
+            .json(&request)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn post_verify_2fa(&self, request: verify2fa::VerifyRequest) -> reqwest::Response {
+        self.http_client
+            .post(format!("{}/verify-2fa", &self.address))
+            .json(&request)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn post_logout(&self) -> reqwest::Response {
+        self.http_client
+            .post(format!("{}/logout", &self.address))
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+
+    pub async fn post_verify_token(
+        &self,
+        request: verifytoken::VerifyTokenRequest,
+    ) -> reqwest::Response {
+        self.http_client
+            .post(format!("{}/verify-token", &self.address))
+            .json(&request)
+            .send()
+            .await
+            .expect("Failed to execute request.")
+    }
+}
