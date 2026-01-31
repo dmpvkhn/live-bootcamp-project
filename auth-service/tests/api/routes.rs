@@ -25,7 +25,7 @@ async fn signup_simple_request() {
         requires_2fa: false,
     };
 
-    let response = app.post_signup(request).await;
+    let response = app.post_signup(&request).await;
 
     assert_eq!(response.status().as_u16(), 200);
 }

@@ -9,6 +9,7 @@ use axum::{
 };
 use tokio::net::TcpListener;
 use tower_http::services::ServeDir;
+pub mod routes;
 
 // This struct encapsulates our application-related logic.
 pub struct Application {
@@ -22,11 +23,11 @@ impl Application {
         let router = Router::new()
             .fallback_service(assets_dir)
             .route("/hello", get(hello_handler))
-            .route("/signup", post(signup))
-            .route("/login", post(login))
-            .route("/verify-2fa", post(verify_2fa))
-            .route("/logout", post(logout))
-            .route("/verify-token", post(verify_token));
+            .route("/signup", post(routes::signup))
+            .route("/login", post(routes::login))
+            .route("/verify-2fa", post(routes::verify_2fa))
+            .route("/logout", post(routes::logout))
+            .route("/verify-token", post(routes::verify_token));
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -44,24 +45,4 @@ impl Application {
 async fn hello_handler() -> Html<&'static str> {
     // TODO: Update this to a custom message!
     Html("<h1>Hello, World!</h1>")
-}
-
-async fn signup() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-async fn login() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-async fn verify_2fa() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-async fn logout() -> impl IntoResponse {
-    StatusCode::OK.into_response()
-}
-
-async fn verify_token() -> impl IntoResponse {
-    StatusCode::OK.into_response()
 }
