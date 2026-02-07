@@ -1,6 +1,5 @@
 use auth_service::model::{
-    login::LoginRequest, signup::SignUPRequest, verify2fa::VerifyRequest,
-    verifytoken::VerifyTokenRequest,
+    login::LoginRequest, verify2fa::VerifyRequest, verifytoken::VerifyTokenRequest,
 };
 
 use crate::helpers::TestApp;

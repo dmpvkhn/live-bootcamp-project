@@ -1,5 +1,5 @@
 use auth_service::{
-    domain::UserStore, services::HashmapUserStore, AppState, Application, UserStoreType,
+    services::HashmapUserStore, AppState, Application,
 };
 use std::sync::Arc;
 use tokio::sync::RwLock;
