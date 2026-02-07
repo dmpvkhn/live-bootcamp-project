@@ -1,8 +1,9 @@
 use crate::domain::AuthAPIError;
+use crate::domain::UserStore;
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::Deserialize;
 
-use crate::{domain::User, model::signup::SignUPResponse, services::UserStoreError, AppState};
+use crate::{domain::User, domain::UserStoreError, model::signup::SignUPResponse, AppState};
 
 pub async fn signup(
     State(state): State<AppState>,
@@ -18,8 +19,8 @@ pub async fn signup(
         return Err(AuthAPIError::InvalidCredentials);
     }
 
-    let mut user_store = state.user_store.write().await;
-    match user_store.add_user(user) {
+    let user_store = state.user_store.clone();
+    match user_store.write().await.add_user(user).await {
         Ok(_) => {}
         Err(e) => {
             match e {

@@ -1,8 +1,11 @@
-use auth_service::{AppState, Application, UserStoreType};
-
+use auth_service::{
+    domain::UserStore, services::HashmapUserStore, AppState, Application, UserStoreType,
+};
+use std::sync::Arc;
+use tokio::sync::RwLock;
 #[tokio::main]
 async fn main() {
-    let user_store = UserStoreType::default();
+    let user_store = Arc::new(RwLock::new(HashmapUserStore::default()));
     let app_state = AppState::new(user_store);
 
     let app = Application::build(app_state, "0.0.0.0:3000")
