@@ -15,20 +15,6 @@ async fn root_returns_auth_ui() {
 }
 
 #[tokio::test]
-async fn login_simple_request() {
-    let app = TestApp::new().await;
-
-    let request = LoginRequest {
-        email: String::from("admin@example.com"),
-        password: String::from("123456"),
-    };
-
-    let response = app.post_login(request).await;
-
-    assert_eq!(response.status().as_u16(), 200);
-}
-
-#[tokio::test]
 async fn verify_two_fa_simple_request() {
     let app = TestApp::new().await;
 
