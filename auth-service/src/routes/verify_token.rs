@@ -18,6 +18,17 @@ pub async fn verify_token(
     };
 
     let email = Email::parse(t.sub).map_err(|_| AuthAPIError::MailformedToken)?;
+
+    if state
+        .banned_token_store
+        .read()
+        .await
+        .tokens
+        .contains(&request.token)
+    {
+        return Err(AuthAPIError::InvalidToken);
+    }
+
     if !state.user_store.read().await.users.contains_key(&email) {
         return Err(AuthAPIError::InvalidToken);
     }
