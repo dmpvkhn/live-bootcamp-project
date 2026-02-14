@@ -2,6 +2,7 @@ use auth_service::model::*;
 use auth_service::utils::constants::test;
 use auth_service::AppState;
 use auth_service::Application;
+use auth_service::BannedStoreType;
 use auth_service::UserStoreType;
 use reqwest::cookie::Jar;
 use reqwest::Client;
@@ -18,7 +19,8 @@ pub struct TestApp {
 impl TestApp {
     pub async fn new() -> Self {
         let user_store = UserStoreType::default();
-        let app_state = AppState::new(user_store);
+        let banned_store = BannedStoreType::default();
+        let app_state = AppState::new(user_store, banned_store);
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
