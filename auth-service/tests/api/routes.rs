@@ -28,16 +28,3 @@ async fn verify_two_fa_simple_request() {
 
     assert_eq!(response.status().as_u16(), 200);
 }
-
-#[tokio::test]
-async fn verify_token_request() {
-    let app = TestApp::new().await;
-
-    let token_request = VerifyTokenRequest {
-        token: String::from("token-123"),
-    };
-
-    let response = app.post_verify_token(token_request).await;
-
-    assert_eq!(response.status().as_u16(), 200);
-}

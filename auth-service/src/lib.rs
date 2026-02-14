@@ -103,6 +103,7 @@ impl IntoResponse for AuthAPIError {
             }
             AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing token"),
             AuthAPIError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
+            AuthAPIError::MailformedToken => (StatusCode::UNPROCESSABLE_ENTITY, "Mailformed token"),
         };
         let body = Json(ErrorResponse {
             error: error_message.to_string(),
