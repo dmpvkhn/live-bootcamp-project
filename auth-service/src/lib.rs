@@ -3,7 +3,7 @@ pub mod domain;
 pub mod model;
 pub mod utils;
 use axum::{
-    http::StatusCode,
+    http::{Method, StatusCode},
     response::{Html, IntoResponse, Response},
     routing::{get, post},
     serve::Serve,
@@ -12,7 +12,7 @@ use axum::{
 use domain::AuthAPIError;
 use serde::{Deserialize, Serialize};
 use tokio::net::TcpListener;
-use tower_http::services::ServeDir;
+use tower_http::{cors::CorsLayer, services::ServeDir};
 pub mod routes;
 pub mod services;
 use std::sync::Arc;
@@ -42,6 +42,19 @@ pub struct Application {
 
 impl Application {
     pub async fn build(app_state: AppState, address: &str) -> Result<Self, Box<dyn Error>> {
+        let allowed_origins = [
+            "http://localhost:8000".parse()?,
+            // TODO: Replace [YOUR_DROPLET_IP] with your Droplet IP address
+            "http://198.211.116.220:8000".parse()?,
+        ];
+
+        let cors = CorsLayer::new()
+            // Allow GET and POST requests
+            .allow_methods([Method::GET, Method::POST])
+            // Allow cookies to be included in requests
+            .allow_credentials(true)
+            .allow_origin(allowed_origins);
+
         let assets_dir = ServeDir::new("assets");
         let router = Router::new()
             .fallback_service(assets_dir)
@@ -51,7 +64,8 @@ impl Application {
             .route("/verify-2fa", post(routes::verify_2fa))
             .route("/logout", post(routes::logout))
             .route("/verify-token", post(routes::verify_token))
-            .with_state(app_state);
+            .with_state(app_state)
+            .layer(cors);
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();
@@ -87,6 +101,8 @@ impl IntoResponse for AuthAPIError {
             AuthAPIError::UnexpectedError => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
             }
+            AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing token"),
+            AuthAPIError::InvalidToken => (StatusCode::UNAUTHORIZED, "Invalid token"),
         };
         let body = Json(ErrorResponse {
             error: error_message.to_string(),

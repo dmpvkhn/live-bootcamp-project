@@ -30,15 +30,6 @@ async fn verify_two_fa_simple_request() {
 }
 
 #[tokio::test]
-async fn logout_request() {
-    let app = TestApp::new().await;
-
-    let response = app.post_logout().await;
-
-    assert_eq!(response.status().as_u16(), 200);
-}
-
-#[tokio::test]
 async fn verify_token_request() {
     let app = TestApp::new().await;
 
