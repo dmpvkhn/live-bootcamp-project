@@ -1,8 +1,10 @@
+use auth_service::domain::TwoFACodeStore;
 use auth_service::model::*;
 use auth_service::utils::constants::test;
 use auth_service::AppState;
 use auth_service::Application;
 use auth_service::BannedStoreType;
+use auth_service::TwoFACodeStoreType;
 use auth_service::UserStoreType;
 use reqwest::cookie::Jar;
 use reqwest::Client;
@@ -12,15 +14,17 @@ use uuid::Uuid;
 
 pub struct TestApp {
     pub address: String,
-    pub cookie_jar: Arc<Jar>, // New!
+    pub cookie_jar: Arc<Jar>,
     pub http_client: reqwest::Client,
+    pub two_fa_code_store: TwoFACodeStoreType,
 }
 
 impl TestApp {
     pub async fn new() -> Self {
         let user_store = UserStoreType::default();
         let banned_store = BannedStoreType::default();
-        let app_state = AppState::new(user_store, banned_store);
+        let two_fa_code_store = TwoFACodeStoreType::default();
+        let app_state = AppState::new(user_store, banned_store, two_fa_code_store.clone());
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
@@ -42,6 +46,7 @@ impl TestApp {
             address,
             cookie_jar,
             http_client,
+            two_fa_code_store,
         }
     }
 

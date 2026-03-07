@@ -20,24 +20,34 @@ use tokio::sync::RwLock;
 
 use crate::{
     domain::BannedTokenStore,
-    services::{hashmap_user_store::HashmapUserStore, HashmapBannedTokenStore},
+    services::{
+        hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore,
+        HashmapBannedTokenStore,
+    },
 };
 
 // Using a type alias to improve readability!
 pub type UserStoreType = Arc<RwLock<HashmapUserStore>>;
 pub type BannedStoreType = Arc<RwLock<HashmapBannedTokenStore>>;
+pub type TwoFACodeStoreType = Arc<RwLock<HashmapTwoFACodeStore>>;
 
 #[derive(Clone)]
 pub struct AppState {
     pub user_store: UserStoreType,
     pub banned_token_store: BannedStoreType,
+    pub two_fa_code_store: TwoFACodeStoreType,
 }
 
 impl AppState {
-    pub fn new(user_store: UserStoreType, banned_token_store: BannedStoreType) -> Self {
+    pub fn new(
+        user_store: UserStoreType,
+        banned_token_store: BannedStoreType,
+        two_fa_code_store: TwoFACodeStoreType,
+    ) -> Self {
         Self {
             user_store,
             banned_token_store,
+            two_fa_code_store,
         }
     }
 }
