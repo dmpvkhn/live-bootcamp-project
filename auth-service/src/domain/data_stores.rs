@@ -94,3 +94,9 @@ impl Default for TwoFACode {
         TwoFACode(code_str)
     }
 }
+
+impl AsRef<str> for TwoFACode {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}

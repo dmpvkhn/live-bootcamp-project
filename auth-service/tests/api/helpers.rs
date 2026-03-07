@@ -1,5 +1,6 @@
 use auth_service::domain::TwoFACodeStore;
 use auth_service::model::*;
+use auth_service::services::mock_email_client::MockEmailClient;
 use auth_service::utils::constants::test;
 use auth_service::AppState;
 use auth_service::Application;
@@ -24,7 +25,13 @@ impl TestApp {
         let user_store = UserStoreType::default();
         let banned_store = BannedStoreType::default();
         let two_fa_code_store = TwoFACodeStoreType::default();
-        let app_state = AppState::new(user_store, banned_store, two_fa_code_store.clone());
+        let email_client = Arc::new(MockEmailClient);
+        let app_state = AppState::new(
+            user_store,
+            banned_store,
+            two_fa_code_store.clone(),
+            email_client,
+        );
 
         let app = Application::build(app_state, test::APP_ADDRESS)
             .await
