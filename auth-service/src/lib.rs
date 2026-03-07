@@ -117,7 +117,7 @@ impl IntoResponse for AuthAPIError {
         let (status, error_message) = match self {
             AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),
             AuthAPIError::IncorrectCredentials => {
-                (StatusCode::UNPROCESSABLE_ENTITY, "Mailformed credentials")
+                (StatusCode::UNAUTHORIZED, "Incorrect credentials")
             }
             AuthAPIError::InvalidCredentials => (StatusCode::BAD_REQUEST, "Invalid credentials"),
             AuthAPIError::UnexpectedError => {

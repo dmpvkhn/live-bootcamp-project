@@ -17,7 +17,7 @@ async fn should_return_422_if_malformed_credentials() {
 
     assert_eq!(
         response.status().as_u16(),
-        422,
+        401,
         "Failed for input: {:?}",
         test_case
     );
@@ -54,7 +54,7 @@ async fn should_return_401_if_incorrect_credentials() {
 
     assert_eq!(
         response.status().as_u16(),
-        422,
+        401,
         "Failed for input: {:?}",
         test_case
     );
