@@ -6,7 +6,7 @@ use auth_service::{
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let test_case = serde_json::json!({
         "email": "adminexample.com",
@@ -21,10 +21,11 @@ async fn should_return_422_if_malformed_credentials() {
         "Failed for input: {:?}",
         test_case
     );
+    app.clean_up().await;
 }
 #[tokio::test]
 async fn should_return_400_if_invalid_input() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let test_case = serde_json::json!({
         // "email": "adminexample.com",
@@ -39,11 +40,12 @@ async fn should_return_400_if_invalid_input() {
         "Failed for input: {:?}",
         test_case
     );
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let test_case = serde_json::json!({
         "email": "admin@example.com",
@@ -58,11 +60,12 @@ async fn should_return_401_if_incorrect_credentials() {
         "Failed for input: {:?}",
         test_case
     );
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let random_email = get_random_email();
 
@@ -91,11 +94,12 @@ async fn should_return_200_if_valid_credentials_and_2fa_disabled() {
         .expect("No auth cookie found");
 
     assert!(!auth_cookie.value().is_empty());
+    app.clean_up().await;
 }
 
 #[tokio::test]
 async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
-    let app = TestApp::new().await;
+    let mut app = TestApp::new().await;
 
     let random_email = get_random_email();
 
@@ -132,4 +136,6 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
         .await
         .expect("2FA code not found in store");
     assert_eq!(stored_id.as_ref(), json_body.login_attempt_id);
+    drop(store);
+    app.clean_up().await;
 }
