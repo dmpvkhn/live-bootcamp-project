@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::domain::{Email, Password, User, UserStore, UserStoreError};
+use crate::domain::{Email, HashedPassword, User, UserStore, UserStoreError};
 
 // TODO: Create a new struct called `HashmapUserStore` containing a `users` field
 // which stores a `HashMap`` of email `String`s mapped to `User` objects.
@@ -29,12 +29,12 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    async fn validate_user(&self, email: Email, password: Password) -> Result<(), UserStoreError> {
-        match self.users.get(&email) {
-            Some(u) if u.password == password => Ok(()),
-            Some(_) => Err(UserStoreError::InvalidCredentials),
-            _ => Err(UserStoreError::UserNotFound),
-        }
+    async fn validate_user(&self, email: Email, raw_password: &str) -> Result<(), UserStoreError> {
+        let user = self.users.get(&email).ok_or(UserStoreError::UserNotFound)?;
+        user.password
+            .verify_raw_password(raw_password)
+            .await
+            .map_err(|_| UserStoreError::InvalidCredentials)
     }
 }
 
@@ -51,7 +51,7 @@ mod tests {
 
         let user = User {
             email: Email::parse("admin@exmple.com".to_string()).unwrap(),
-            password: Password::parse("password".to_string()).unwrap(),
+            password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
 
@@ -67,7 +67,7 @@ mod tests {
 
         let user = User {
             email: Email::parse("admin@example.com".to_string()).unwrap(),
-            password: Password::parse("password".to_string()).unwrap(),
+            password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
 
@@ -89,7 +89,7 @@ mod tests {
 
         let user = User {
             email: Email::parse("admin@example.com".to_string()).unwrap(),
-            password: Password::parse("password".to_string()).unwrap(),
+            password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
 
@@ -99,7 +99,7 @@ mod tests {
         let not_found = storage
             .validate_user(
                 Email::parse("hacker@example.com".to_string()).unwrap(),
-                Password::parse("password".to_string()).unwrap(),
+                "password",
             )
             .await;
         assert_eq!(not_found, Err(UserStoreError::UserNotFound));
@@ -107,7 +107,7 @@ mod tests {
         let wrong_password = storage
             .validate_user(
                 Email::parse("admin@example.com".to_string()).unwrap(),
-                Password::parse("password1".to_string()).unwrap(),
+                "password1",
             )
             .await;
         assert_eq!(wrong_password, Err(UserStoreError::InvalidCredentials));
@@ -115,7 +115,7 @@ mod tests {
         let correct = storage
             .validate_user(
                 Email::parse("admin@example.com".to_string()).unwrap(),
-                Password::parse("password".to_string()).unwrap(),
+                "password",
             )
             .await;
         assert_eq!(correct, Ok(()));

@@ -3,7 +3,7 @@ use axum::response::IntoResponse;
 use axum::{extract::State, http::StatusCode, Json};
 use axum_extra::extract::CookieJar;
 
-use crate::domain::{AuthAPIError, Email, LoginAttemptId, Password, TwoFACode, UserStore};
+use crate::domain::{AuthAPIError, Email, HashedPassword, LoginAttemptId, TwoFACode, UserStore};
 use crate::model::login::{LoginRequest, LoginResponse, TwoFactorAuthResponse};
 use crate::utils::auth::generate_auth_cookie;
 use crate::AppState;
@@ -19,14 +19,12 @@ pub async fn login(
         Err(_e) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
     };
 
-    let password = match Password::parse(request.password) {
-        Ok(p) => p,
-        Err(_e) => return (jar, Err(AuthAPIError::InvalidCredentials)),
-    };
-
     let user_store = &state.user_store.read().await;
 
-    match user_store.validate_user(email.clone(), password).await {
+    match user_store
+        .validate_user(email.clone(), &request.password)
+        .await
+    {
         Ok(_) => {}
         Err(_e) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
     }

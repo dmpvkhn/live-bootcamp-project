@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
 
-use crate::domain::{AuthAPIError, Email};
+use crate::domain::{AuthAPIError, Email, UserStore};
 use crate::model::verifytoken::VerifyTokenRequest;
 use crate::utils::auth::validate_token;
 use crate::AppState;
@@ -29,7 +29,7 @@ pub async fn verify_token(
         return Err(AuthAPIError::InvalidToken);
     }
 
-    if !state.user_store.read().await.users.contains_key(&email) {
+    if state.user_store.read().await.get_user(email).await.is_err() {
         return Err(AuthAPIError::InvalidToken);
     }
 

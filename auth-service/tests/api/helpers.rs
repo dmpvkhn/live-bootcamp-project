@@ -2,14 +2,18 @@ use auth_service::domain::TwoFACodeStore;
 use auth_service::model::*;
 use auth_service::services::mock_email_client::MockEmailClient;
 use auth_service::utils::constants::test;
+use auth_service::utils::constants::DATABASE_URL;
 use auth_service::AppState;
 use auth_service::Application;
 use auth_service::BannedStoreType;
 use auth_service::TwoFACodeStoreType;
 use auth_service::UserStoreType;
+use auth_service::{get_postgres_pool, services::PostgresUserStore};
 use reqwest::cookie::Jar;
 use reqwest::Client;
+use sqlx::{postgres::PgPoolOptions, Executor, PgPool};
 use std::sync::Arc;
+use tokio::sync::RwLock;
 
 use uuid::Uuid;
 
@@ -22,7 +26,8 @@ pub struct TestApp {
 
 impl TestApp {
     pub async fn new() -> Self {
-        let user_store = UserStoreType::default();
+        let pg_pool = configure_postgresql().await;
+        let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
         let banned_store = BannedStoreType::default();
         let two_fa_code_store = TwoFACodeStoreType::default();
         let email_client = Arc::new(MockEmailClient);
@@ -123,4 +128,24 @@ impl TestApp {
 
 pub fn get_random_email() -> String {
     format!("{}@example.com", Uuid::new_v4())
+}
+
+async fn configure_postgresql() -> PgPool {
+    let postgresql_conn_url = DATABASE_URL.to_owned();
+    let db_name = Uuid::new_v4().to_string();
+    configure_database(&postgresql_conn_url, &db_name).await;
+    get_postgres_pool(&format!("{}/{}", postgresql_conn_url, db_name))
+        .await
+        .expect("Failed to create Postgres connection pool!")
+}
+
+async fn configure_database(db_conn_string: &str, db_name: &str) {
+    let connection = PgPoolOptions::new().connect(db_conn_string).await.unwrap();
+    connection
+        .execute(format!(r#"CREATE DATABASE "{}";"#, db_name).as_str())
+        .await
+        .unwrap();
+    let db_conn_string = format!("{}/{}", db_conn_string, db_name);
+    let connection = PgPoolOptions::new().connect(&db_conn_string).await.unwrap();
+    sqlx::migrate!().run(&connection).await.unwrap();
 }

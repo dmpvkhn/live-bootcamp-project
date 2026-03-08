@@ -1,5 +1,8 @@
 pub use validator::Validate;
 pub use validator::ValidationError;
+
+use crate::domain::HashedPassword;
+
 pub enum EmailError {
     InvalidEmail,
 }
@@ -34,32 +37,17 @@ impl Email {
     }
 }
 
-impl Password {
-    pub fn parse(password: String) -> Result<Self, ValidationError> {
-        Ok(Password(password))
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Password(String);
-
-impl AsRef<str> for Password {
-    fn as_ref(&self) -> &str {
-        self.0.as_str()
-    }
-}
-
 // The User struct should contain 3 fields. email, which is a String;
 // password, which is also a String; and requires_2fa, which is a boolean.
 #[derive(Clone, Debug, PartialEq)]
 pub struct User {
     pub email: Email,
-    pub password: Password,
+    pub password: HashedPassword,
     pub requires_2fa: bool,
 }
 
 impl User {
-    pub fn new(email: Email, password: Password, requires_2fa: bool) -> Self {
+    pub fn new(email: Email, password: HashedPassword, requires_2fa: bool) -> Self {
         Self {
             email,
             password,
