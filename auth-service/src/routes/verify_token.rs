@@ -3,7 +3,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
 
-use crate::domain::{AuthAPIError, Email, UserStore};
+use crate::domain::{AuthAPIError, BannedTokenStore, Email, UserStore};
 use crate::model::verifytoken::VerifyTokenRequest;
 use crate::utils::auth::validate_token;
 use crate::AppState;
@@ -23,8 +23,9 @@ pub async fn verify_token(
         .banned_token_store
         .read()
         .await
-        .tokens
-        .contains(&request.token)
+        .is_banned(&request.token)
+        .await
+        .map_err(|_| AuthAPIError::UnexpectedError)?
     {
         return Err(AuthAPIError::InvalidToken);
     }

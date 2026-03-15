@@ -4,6 +4,7 @@ services:
     restart: "always" # automatically restart container when server crashes
     environment: # set up environment variables
       AUTH_SERVICE_IP: ${AUTH_SERVICE_IP:-localhost} # Use localhost as the default value
+      REDIS_HOST_NAME: ${REDIS_HOST_NAME:-localhost}
     ports:
       - "8000:8000" # expose port 8000 so that applications outside the container can connect to it
     depends_on: # only run app-service after auth-service has started
@@ -26,6 +27,11 @@ services:
       - "5432:5432"
     volumes:
       - db:/var/lib/postgresql/data
+  redis:
+    image: redis:7.0-alpine
+    restart: always
+    ports:
+      - "6379:6379"
 volumes:
   db:
     driver: local

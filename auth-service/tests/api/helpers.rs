@@ -1,14 +1,18 @@
 use auth_service::domain::TwoFACodeStore;
+use auth_service::get_redis_client;
 use auth_service::model::*;
 use auth_service::services::mock_email_client::MockEmailClient;
+use auth_service::services::RedisBannedTokenStore;
 use auth_service::utils::constants::test;
 use auth_service::utils::constants::DATABASE_URL;
+use auth_service::utils::constants::DEFAULT_REDIS_HOSTNAME;
 use auth_service::AppState;
 use auth_service::Application;
 use auth_service::BannedStoreType;
 use auth_service::TwoFACodeStoreType;
 use auth_service::UserStoreType;
 use auth_service::{get_postgres_pool, services::PostgresUserStore};
+use redis::Connection as RedisConnection;
 use reqwest::cookie::Jar;
 use reqwest::Client;
 use sqlx::postgres::PgConnectOptions;
@@ -34,7 +38,8 @@ impl TestApp {
         let db_name = Uuid::new_v4().to_string();
         let pg_pool = configure_postgresql(&db_name).await;
         let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
-        let banned_store = BannedStoreType::default();
+        let redis_conn = Arc::new(RwLock::new(configure_redis()));
+        let banned_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(redis_conn)));
         let two_fa_code_store = TwoFACodeStoreType::default();
         let email_client = Arc::new(MockEmailClient);
         let app_state = AppState::new(
@@ -168,6 +173,13 @@ async fn configure_database(db_conn_string: &str, db_name: &str) {
     let db_conn_string = format!("{}/{}", db_conn_string, db_name);
     let connection = PgPoolOptions::new().connect(&db_conn_string).await.unwrap();
     sqlx::migrate!().run(&connection).await.unwrap();
+}
+
+fn configure_redis() -> RedisConnection {
+    get_redis_client(DEFAULT_REDIS_HOSTNAME.to_owned())
+        .expect("Failed to get Redis client")
+        .get_connection()
+        .expect("Failed to get Redis connection")
 }
 
 async fn delete_database(db_name: &str) {

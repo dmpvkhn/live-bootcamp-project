@@ -8,3 +8,6 @@ pub use hashmap_user_store::*;
 
 pub mod postgres_user_store;
 pub use postgres_user_store::*;
+
+pub mod redis_banned_token_store;
+pub use redis_banned_token_store::*;
