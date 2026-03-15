@@ -1,14 +1,13 @@
 use crate::domain::TwoFACodeStore;
+use crate::domain::{AuthAPIError, Email, LoginAttemptId, TwoFACode};
+use crate::utils::auth::generate_auth_cookie;
+use crate::AppState;
 use axum::response::IntoResponse;
 use axum::Json;
 use axum::{extract::State, http::StatusCode};
 use axum_extra::extract::CookieJar;
 use serde;
 use serde::Deserialize;
-
-use crate::domain::{AuthAPIError, Email, LoginAttemptId, TwoFACode};
-use crate::utils::auth::generate_auth_cookie;
-use crate::AppState;
 
 pub async fn verify_2fa(
     State(state): State<AppState>,

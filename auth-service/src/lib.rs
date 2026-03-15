@@ -24,7 +24,7 @@ use crate::{
     domain::{BannedTokenStore, EmailClient},
     services::{
         hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore,
-        HashmapBannedTokenStore, PostgresUserStore, RedisBannedTokenStore,
+        HashmapBannedTokenStore, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore,
     },
 };
 
@@ -32,7 +32,8 @@ use crate::{
 pub type UserStoreType = Arc<RwLock<PostgresUserStore>>;
 // pub type BannedStoreType = Arc<RwLock<HashmapBannedTokenStore>>;
 pub type BannedStoreType = Arc<RwLock<RedisBannedTokenStore>>;
-pub type TwoFACodeStoreType = Arc<RwLock<HashmapTwoFACodeStore>>;
+// pub type TwoFACodeStoreType = Arc<RwLock<HashmapTwoFACodeStore>>;
+pub type TwoFACodeStoreType = Arc<RwLock<RedisTwoFACodeStore>>;
 pub type EmailClientType = Arc<dyn EmailClient + Send + Sync>;
 
 #[derive(Clone)]
