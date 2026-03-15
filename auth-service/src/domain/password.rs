@@ -28,13 +28,16 @@ impl HashedPassword {
         &self,
         password_candidate: &str,
     ) -> Result<(), Box<dyn Error + Send + Sync>> {
+        let current_span: tracing::Span = tracing::Span::current();
         let password_hash = self.as_ref().to_owned();
         let password_candidate = password_candidate.to_owned();
         tokio::task::spawn_blocking(move || {
-            let expected_password_hash = PasswordHash::new(&password_hash)?;
-            Argon2::default()
-                .verify_password(password_candidate.as_bytes(), &expected_password_hash)
-                .map_err(|e| e.into())
+            current_span.in_scope(|| {
+                let expected_password_hash = PasswordHash::new(&password_hash)?;
+                Argon2::default()
+                    .verify_password(password_candidate.as_bytes(), &expected_password_hash)
+                    .map_err(|e| e.into())
+            })
         })
         .await?
     }
@@ -48,17 +51,20 @@ impl AsRef<str> for HashedPassword {
 
 #[tracing::instrument(name = "Computing password hash", skip_all)]
 async fn compute_password_hash(password: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
+    let current_span: tracing::Span = tracing::Span::current();
     let password = password.to_owned();
     tokio::task::spawn_blocking(move || {
-        let salt = SaltString::generate(&mut OsRng);
-        let hash = Argon2::new(
-            Algorithm::Argon2id,
-            Version::V0x13,
-            Params::new(15000, 2, 1, None)?,
-        )
-        .hash_password(password.as_bytes(), &salt)?
-        .to_string();
-        Ok(hash)
+        current_span.in_scope(|| {
+            let salt = SaltString::generate(&mut OsRng);
+            let hash = Argon2::new(
+                Algorithm::Argon2id,
+                Version::V0x13,
+                Params::new(15000, 2, 1, None)?,
+            )
+            .hash_password(password.as_bytes(), &salt)?
+            .to_string();
+            Ok(hash)
+        })
     })
     .await?
 }

@@ -17,6 +17,7 @@ use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 pub mod routes;
 pub mod services;
+use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -127,13 +128,14 @@ pub struct ErrorResponse {
 
 impl IntoResponse for AuthAPIError {
     fn into_response(self) -> Response {
+        log_error_chain(&self);
         let (status, error_message) = match self {
             AuthAPIError::UserAlreadyExists => (StatusCode::CONFLICT, "User already exists"),
             AuthAPIError::IncorrectCredentials => {
                 (StatusCode::UNAUTHORIZED, "Incorrect credentials")
             }
             AuthAPIError::InvalidCredentials => (StatusCode::BAD_REQUEST, "Invalid credentials"),
-            AuthAPIError::UnexpectedError => {
+            AuthAPIError::UnexpectedError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, "Unexpected error")
             }
             AuthAPIError::MissingToken => (StatusCode::BAD_REQUEST, "Missing token"),
@@ -155,4 +157,17 @@ pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
 pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {
     let redis_url = format!("redis://{}/", redis_hostname);
     redis::Client::open(redis_url)
+}
+
+fn log_error_chain(e: &(dyn Error + 'static)) {
+    let separator =
+        "\n-----------------------------------------------------------------------------------\n";
+    let mut report = format!("{}{:?}\n", separator, e);
+    let mut current = e.source();
+    while let Some(cause) = current {
+        report = format!("{}\nCaused by:\n\n{:?}", report, cause);
+        current = cause.source();
+    }
+    report = format!("{}\n{}", report, separator);
+    tracing::error!("{}", report);
 }

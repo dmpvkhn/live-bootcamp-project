@@ -25,7 +25,7 @@ pub async fn signup(
         Ok(_) => {}
         Err(e) => match e {
             UserStoreError::UserAlreadyExists => return Err(AuthAPIError::UserAlreadyExists),
-            _ => return Err(AuthAPIError::UnexpectedError),
+            _ => return Err(AuthAPIError::UnexpectedError(e.into())),
         },
     };
 

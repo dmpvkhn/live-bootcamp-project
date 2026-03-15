@@ -1,6 +1,8 @@
 use super::User;
 use crate::domain::{Email, HashedPassword};
+use color_eyre::eyre::Report;
 use rand::random_range;
+use thiserror::Error;
 
 #[async_trait::async_trait]
 pub trait UserStore {
@@ -11,14 +13,29 @@ pub trait UserStore {
     async fn validate_user(&self, email: Email, raw_password: &str) -> Result<(), UserStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum UserStoreError {
+    #[error("User already exists")]
     UserAlreadyExists,
+    #[error("User not found")]
     UserNotFound,
+    #[error("Invalid credentials")]
     InvalidCredentials,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
+impl PartialEq for UserStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::UserAlreadyExists, Self::UserAlreadyExists)
+                | (Self::UserNotFound, Self::UserNotFound)
+                | (Self::InvalidCredentials, Self::InvalidCredentials)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
+}
 #[derive(Debug, PartialEq)]
 pub enum BannedTokenStoreError {
     UnexpectedError,
