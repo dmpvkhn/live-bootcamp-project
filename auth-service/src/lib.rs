@@ -20,6 +20,9 @@ pub mod services;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+use tower_http::trace::TraceLayer;
+use utils::tracing::{make_span_with_request_id, on_request, on_response};
+
 use crate::{
     domain::{BannedTokenStore, EmailClient},
     services::{
@@ -91,7 +94,13 @@ impl Application {
             .route("/logout", post(routes::logout))
             .route("/verify-token", post(routes::verify_token))
             .with_state(app_state)
-            .layer(cors);
+            .layer(cors)
+            .layer(
+                TraceLayer::new_for_http()
+                    .make_span_with(make_span_with_request_id)
+                    .on_request(on_request)
+                    .on_response(on_response),
+            );
 
         let listener = tokio::net::TcpListener::bind(address).await?;
         let address = listener.local_addr()?.to_string();

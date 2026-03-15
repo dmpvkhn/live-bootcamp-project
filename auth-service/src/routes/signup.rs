@@ -7,6 +7,7 @@ use serde::Deserialize;
 
 use crate::{domain::User, domain::UserStoreError, model::signup::SignUPResponse, AppState};
 
+#[tracing::instrument(name = "Signup", skip_all, err(Debug))]
 pub async fn signup(
     State(state): State<AppState>,
     Json(request): Json<SignupRequest>,

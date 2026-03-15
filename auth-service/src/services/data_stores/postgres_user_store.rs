@@ -16,6 +16,7 @@ impl PostgresUserStore {
 
 #[async_trait::async_trait]
 impl UserStore for PostgresUserStore {
+    #[tracing::instrument(name = "Adding user to PostgreSQL", skip_all)]
     async fn add_user(&mut self, user: User) -> Result<(), UserStoreError> {
         sqlx::query!(
             "INSERT INTO users (email, password_hash, requires_2fa) VALUES ($1, $2, $3)",
@@ -34,6 +35,7 @@ impl UserStore for PostgresUserStore {
         Ok(())
     }
 
+    #[tracing::instrument(name = "Retrieving user from PostgreSQL", skip_all)]
     async fn get_user(&self, email: Email) -> Result<User, UserStoreError> {
         let email_str = email.as_ref();
         let row = sqlx::query!(
@@ -50,6 +52,7 @@ impl UserStore for PostgresUserStore {
         Ok(User::new(email, password, row.requires_2fa))
     }
 
+    #[tracing::instrument(name = "Validating user credentials in PostgreSQL", skip_all)]
     async fn validate_user(&self, email: Email, raw_password: &str) -> Result<(), UserStoreError> {
         let user = self.get_user(email).await?;
         user.password

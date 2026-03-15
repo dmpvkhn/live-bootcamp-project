@@ -23,6 +23,7 @@ impl HashedPassword {
         Ok(HashedPassword(hash))
     }
 
+    #[tracing::instrument(name = "Verify raw password", skip_all)]
     pub async fn verify_raw_password(
         &self,
         password_candidate: &str,
@@ -45,6 +46,7 @@ impl AsRef<str> for HashedPassword {
     }
 }
 
+#[tracing::instrument(name = "Computing password hash", skip_all)]
 async fn compute_password_hash(password: &str) -> Result<String, Box<dyn Error + Send + Sync>> {
     let password = password.to_owned();
     tokio::task::spawn_blocking(move || {
