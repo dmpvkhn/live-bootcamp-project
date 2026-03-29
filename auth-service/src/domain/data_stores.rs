@@ -1,6 +1,6 @@
 use super::User;
 use crate::domain::{Email, HashedPassword};
-use color_eyre::eyre::Report;
+use color_eyre::eyre::{eyre, Context, Report, Result};
 use rand::random_range;
 use thiserror::Error;
 
@@ -36,9 +36,11 @@ impl PartialEq for UserStoreError {
         )
     }
 }
-#[derive(Debug, PartialEq)]
+
+#[derive(Debug, Error)]
 pub enum BannedTokenStoreError {
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
 }
 
 #[async_trait::async_trait]
@@ -62,20 +64,31 @@ pub trait TwoFACodeStore {
     ) -> Result<(LoginAttemptId, TwoFACode), TwoFACodeStoreError>;
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Error)]
 pub enum TwoFACodeStoreError {
+    #[error("Login attempt ID not found")]
     LoginAttemptIdNotFound,
-    UnexpectedError,
+    #[error("Unexpected error")]
+    UnexpectedError(#[source] Report),
+}
+
+impl PartialEq for TwoFACodeStoreError {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(
+            (self, other),
+            (Self::LoginAttemptIdNotFound, Self::LoginAttemptIdNotFound)
+                | (Self::UnexpectedError(_), Self::UnexpectedError(_))
+        )
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LoginAttemptId(String);
 
 impl LoginAttemptId {
-    pub fn parse(id: String) -> Result<Self, String> {
-        uuid::Uuid::parse_str(&id)
-            .map(|_| LoginAttemptId(id))
-            .map_err(|e| e.to_string())
+    pub fn parse(id: String) -> Result<Self> {
+        uuid::Uuid::parse_str(&id).wrap_err("Invalid login attempt ID")?;
+        Ok(Self(id))
     }
 }
 
@@ -95,11 +108,11 @@ impl AsRef<str> for LoginAttemptId {
 pub struct TwoFACode(String);
 
 impl TwoFACode {
-    pub fn parse(code: String) -> Result<Self, String> {
+    pub fn parse(code: String) -> Result<Self> {
         if code.len() == 6 && code.chars().all(|c| c.is_ascii_digit()) {
             Ok(TwoFACode(code))
         } else {
-            Err("Invalid 2FA code: must be exactly 6 digits".to_owned())
+            Err(eyre!("Invalid 2FA code: must be exactly 6 digits"))
         }
     }
 }

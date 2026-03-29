@@ -2,12 +2,14 @@ use crate::domain::TwoFACodeStore;
 use axum::response::IntoResponse;
 use axum::{extract::State, http::StatusCode, Json};
 use axum_extra::extract::CookieJar;
+use color_eyre::eyre::eyre;
 
 use crate::domain::{AuthAPIError, Email, HashedPassword, LoginAttemptId, TwoFACode, UserStore};
 use crate::model::login::{LoginRequest, LoginResponse, TwoFactorAuthResponse};
 use crate::utils::auth::generate_auth_cookie;
 use crate::AppState;
 
+#[tracing::instrument(name = "Login", skip_all)]
 pub async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -40,6 +42,7 @@ pub async fn login(
     }
 }
 
+#[tracing::instrument(name = "Handle 2FA", skip_all)]
 async fn handle_2fa(
     email: &Email,
     state: &AppState,
@@ -51,24 +54,22 @@ async fn handle_2fa(
     let login_attempt_id = LoginAttemptId::default();
     let two_fa_code = TwoFACode::default();
 
-    if state
+    if let Err(e) = state
         .two_fa_code_store
         .write()
         .await
         .add_code(email.clone(), login_attempt_id.clone(), two_fa_code.clone())
         .await
-        .is_err()
     {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
     };
 
-    if state
+    if let Err(e) = state
         .email_client
         .send_email(email, "2FA Code", two_fa_code.as_ref())
         .await
-        .is_err()
     {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+        return (jar, Err(AuthAPIError::UnexpectedError(e)));
     }
 
     let response = Json(LoginResponse::TwoFactorAuth(TwoFactorAuthResponse {
@@ -78,7 +79,7 @@ async fn handle_2fa(
     (jar, Ok((StatusCode::PARTIAL_CONTENT, response)))
 }
 
-// New!
+#[tracing::instrument(name = "Handle No 2FA", skip_all)]
 async fn handle_no_2fa(
     email: &Email,
     jar: CookieJar,
@@ -87,8 +88,7 @@ async fn handle_no_2fa(
     Result<(StatusCode, Json<LoginResponse>), AuthAPIError>,
 ) {
     let result = async {
-        let auth_cookie =
-            generate_auth_cookie(email).map_err(|_e| AuthAPIError::UnexpectedError)?;
+        let auth_cookie = generate_auth_cookie(email).map_err(AuthAPIError::UnexpectedError)?;
         Ok(auth_cookie)
     }
     .await;

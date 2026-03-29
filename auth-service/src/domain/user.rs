@@ -1,7 +1,7 @@
+use crate::domain::HashedPassword;
+use color_eyre::eyre::{eyre, Result};
 pub use validator::Validate;
 pub use validator::ValidationError;
-
-use crate::domain::HashedPassword;
 
 pub enum EmailError {
     InvalidEmail,
@@ -23,15 +23,13 @@ impl AsRef<str> for Email {
 }
 
 impl Email {
-    pub fn parse(email: String) -> Result<Self, ValidationError> {
+    pub fn parse(email: String) -> Result<Self> {
         let validator = EmailValidator {
             email: email.clone(),
         };
 
         // Validate using the validator crate
-        validator
-            .validate()
-            .map_err(|_| ValidationError::new("invalid_email"))?;
+        validator.validate().map_err(|_| eyre!("Invalid email"))?;
 
         Ok(Email(email))
     }

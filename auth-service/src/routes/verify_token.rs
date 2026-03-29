@@ -8,6 +8,7 @@ use crate::model::verifytoken::VerifyTokenRequest;
 use crate::utils::auth::validate_token;
 use crate::AppState;
 
+#[tracing::instrument(skip_all)]
 pub async fn verify_token(
     State(state): State<AppState>,
     Json(request): Json<VerifyTokenRequest>,
@@ -25,7 +26,7 @@ pub async fn verify_token(
         .await
         .is_banned(&request.token)
         .await
-        .map_err(|_| AuthAPIError::UnexpectedError)?
+        .map_err(|e| AuthAPIError::UnexpectedError(e.into()))?
     {
         return Err(AuthAPIError::InvalidToken);
     }

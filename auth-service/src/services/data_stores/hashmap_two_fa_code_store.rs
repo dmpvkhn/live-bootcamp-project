@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use async_trait::async_trait;
+use color_eyre::eyre::eyre;
 
 use crate::domain::{
     Email, {LoginAttemptId, TwoFACode, TwoFACodeStore, TwoFACodeStoreError},
@@ -26,7 +27,9 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
     async fn remove_code(&mut self, email: &Email) -> Result<(), TwoFACodeStoreError> {
         self.codes
             .remove(email)
-            .ok_or(TwoFACodeStoreError::UnexpectedError)?;
+            .ok_or(TwoFACodeStoreError::UnexpectedError(eyre!(
+                "Error remove code"
+            )))?;
         Ok(())
     }
     async fn get_code(
@@ -36,7 +39,9 @@ impl TwoFACodeStore for HashmapTwoFACodeStore {
         self.codes
             .get(email)
             .cloned()
-            .ok_or(TwoFACodeStoreError::UnexpectedError)
+            .ok_or(TwoFACodeStoreError::UnexpectedError(eyre!(
+                "Error get code"
+            )))
     }
 }
 
@@ -71,7 +76,10 @@ mod tests {
         let store = HashmapTwoFACodeStore::default();
         let result = store.get_code(&email()).await;
 
-        assert_eq!(result, Err(TwoFACodeStoreError::UnexpectedError));
+        assert!(matches!(
+            result,
+            Err(TwoFACodeStoreError::UnexpectedError(_))
+        ))
     }
 
     #[tokio::test]
@@ -91,7 +99,10 @@ mod tests {
 
         // After removal, get_code should fail
         let result = store.get_code(&email).await;
-        assert_eq!(result, Err(TwoFACodeStoreError::UnexpectedError));
+        assert!(matches!(
+            result,
+            Err(TwoFACodeStoreError::UnexpectedError(_))
+        ))
     }
 
     #[tokio::test]
@@ -99,7 +110,10 @@ mod tests {
         let mut store = HashmapTwoFACodeStore::default();
         let result = store.remove_code(&email()).await;
 
-        assert_eq!(result, Err(TwoFACodeStoreError::UnexpectedError));
+        assert!(matches!(
+            result,
+            Err(TwoFACodeStoreError::UnexpectedError(_))
+        ))
     }
 
     #[tokio::test]

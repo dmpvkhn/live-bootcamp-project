@@ -9,6 +9,7 @@ use axum_extra::extract::CookieJar;
 use serde;
 use serde::Deserialize;
 
+#[tracing::instrument(skip_all)]
 pub async fn verify_2fa(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -42,13 +43,13 @@ pub async fn verify_2fa(
         return (jar, Err(AuthAPIError::IncorrectCredentials));
     }
 
-    if store.remove_code(&email).await.is_err() {
-        return (jar, Err(AuthAPIError::UnexpectedError));
+    if let Err(e) = store.remove_code(&email).await {
+        return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
     }
 
     let cookie = match generate_auth_cookie(&email) {
         Ok(c) => c,
-        Err(_) => return (jar, Err(AuthAPIError::UnexpectedError)),
+        Err(e) => return (jar, Err(AuthAPIError::UnexpectedError(e))),
     };
     (jar.add(cookie), Ok(StatusCode::OK.into_response()))
 }

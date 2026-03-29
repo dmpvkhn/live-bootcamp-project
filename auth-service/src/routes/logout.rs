@@ -7,6 +7,7 @@ use crate::{
     AppState,
 };
 
+#[tracing::instrument(skip_all)]
 pub async fn logout(
     State(state): State<AppState>,
     jar: CookieJar,
@@ -25,7 +26,9 @@ pub async fn logout(
 
     {
         let mut writer = state.banned_token_store.write().await;
-        let _ = writer.store_token(token).await;
+        if let Err(e) = writer.store_token(token).await {
+            return (jar, Err(AuthAPIError::UnexpectedError(e.into())));
+        }
     }
     let jar = jar.remove(Cookie::from(JWT_COOKIE_NAME));
 

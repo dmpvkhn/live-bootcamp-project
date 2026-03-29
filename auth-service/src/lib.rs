@@ -17,7 +17,6 @@ use tokio::net::TcpListener;
 use tower_http::{cors::CorsLayer, services::ServeDir};
 pub mod routes;
 pub mod services;
-use std::error::Error;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 

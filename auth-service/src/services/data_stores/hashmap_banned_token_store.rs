@@ -1,6 +1,6 @@
-use std::collections::HashSet;
-
 use crate::domain::{BannedTokenStore, BannedTokenStoreError};
+use color_eyre::eyre;
+use std::collections::HashSet;
 
 #[derive(Default)]
 pub struct HashmapBannedTokenStore {
@@ -10,7 +10,9 @@ pub struct HashmapBannedTokenStore {
 impl BannedTokenStore for HashmapBannedTokenStore {
     async fn store_token(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
         if !self.tokens.insert(token) {
-            Err(BannedTokenStoreError::UnexpectedError)
+            Err(BannedTokenStoreError::UnexpectedError(eyre::eyre!(
+                "token already exists"
+            )))
         } else {
             Ok(())
         }

@@ -47,8 +47,7 @@ impl UserStore for PostgresUserStore {
         .await
         .map_err(|_| UserStoreError::UserNotFound)?;
 
-        let email =
-            Email::parse(row.email).map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?;
+        let email = Email::parse(row.email).map_err(UserStoreError::UnexpectedError)?;
         let password = HashedPassword::parse_password_hash(row.password_hash)
             .map_err(|e| UserStoreError::UnexpectedError(eyre!(e)))?;
         Ok(User::new(email, password, row.requires_2fa))

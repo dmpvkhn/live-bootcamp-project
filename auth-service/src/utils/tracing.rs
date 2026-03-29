@@ -15,6 +15,7 @@ pub fn init_tracing() -> Result<()> {
         .with(filter_layer)
         .with(ErrorLayer::default())
         .init();
+    Ok(())
 }
 
 pub fn make_span_with_request_id(request: &Request<Body>) -> Span {
