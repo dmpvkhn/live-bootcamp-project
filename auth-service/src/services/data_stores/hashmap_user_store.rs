@@ -45,7 +45,7 @@ impl UserStore for HashmapUserStore {
 // TODO: Add unit tests for your `HashmapUserStore` implementation
 #[cfg(test)]
 mod tests {
-    use crate::domain::Email;
+    use crate::domain::{Email, HashedPassword};
     use secrecy::SecretString;
 
     use super::*;

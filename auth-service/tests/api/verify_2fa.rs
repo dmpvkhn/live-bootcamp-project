@@ -34,13 +34,6 @@ async fn should_return_401_if_incorrect_credentials() {
         .await
         .unwrap();
 
-    Mock::given(path("/email"))
-        .and(method("POST"))
-        .respond_with(ResponseTemplate::new(200))
-        .expect(2)
-        .mount(&app.email_server)
-        .await;
-
     let body = serde_json::json!({
         "email": random_email,
         "loginAttemptId": login_body.login_attempt_id,
@@ -60,6 +53,13 @@ async fn should_return_401_if_old_code() {
         "email": random_email, "password": "password123", "requires2FA": true
     }))
     .await;
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(2)
+        .mount(&app.email_server)
+        .await;
 
     let login_body1 = app
         .post_login(&serde_json::json!({
@@ -100,6 +100,13 @@ async fn should_return_200_if_correct_code() {
         "email": random_email, "password": "password123", "requires2FA": true
     }))
     .await;
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
     let login_body = app
         .post_login(&serde_json::json!({
