@@ -1,31 +1,34 @@
 use auth_service::{
+    domain::Email,
     get_postgres_pool,
     services::{
-        mock_email_client::MockEmailClient, HashmapBannedTokenStore, HashmapTwoFACodeStore,
+        postmark_email_client::PostmarkEmailClient, HashmapBannedTokenStore, HashmapTwoFACodeStore,
         HashmapUserStore, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore,
     },
     utils::{
-        constants::{prod, DATABASE_URL},
+        constants::{prod, DATABASE_URL, POSTMARK_AUTH_TOKEN},
         tracing::init_tracing,
     },
     AppState, Application,
 };
 use auth_service::{get_redis_client, utils::constants::REDIS_HOST_NAME};
 use redis::Connection;
+use reqwest::Client;
+use secrecy::SecretString;
 use sqlx::PgPool;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 #[tokio::main]
 async fn main() {
     color_eyre::install().expect("Failed to install color_eyre");
-    init_tracing();
+    let _ = init_tracing();
 
     let pg_pool = configure_postgresql().await;
     let user_store = Arc::new(RwLock::new(PostgresUserStore::new(pg_pool)));
     let redis_conn = Arc::new(RwLock::new(configure_redis()));
     let banned_token_store = Arc::new(RwLock::new(RedisBannedTokenStore::new(redis_conn.clone())));
     let twofa_token_store = Arc::new(RwLock::new(RedisTwoFACodeStore::new(redis_conn)));
-    let email_client = Arc::new(MockEmailClient);
+    let email_client = Arc::new(configure_postmark_email_client());
     let app_state = AppState::new(
         user_store,
         banned_token_store,
@@ -40,6 +43,23 @@ async fn main() {
         .expect("Failed to build app");
 
     app.run().await.expect("Failed to run app");
+}
+
+fn configure_postmark_email_client() -> PostmarkEmailClient {
+    let http_client = Client::builder()
+        .timeout(prod::email_client::TIMEOUT)
+        .build()
+        .expect("Failed to build HTTP client");
+
+    PostmarkEmailClient::new(
+        prod::email_client::BASE_URL.to_owned(),
+        Email::parse(SecretString::new(
+            prod::email_client::SENDER.to_owned().into_boxed_str(),
+        ))
+        .expect("Failed to parse sender email"),
+        POSTMARK_AUTH_TOKEN.clone(),
+        http_client,
+    )
 }
 
 async fn configure_postgresql() -> PgPool {

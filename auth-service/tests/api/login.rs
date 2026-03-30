@@ -4,6 +4,8 @@ use auth_service::{
     model::login::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME, ErrorResponse,
 };
 use secrecy::SecretString;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
@@ -122,6 +124,13 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
     let response = app.post_login(&login_body).await;
 
     assert_eq!(response.status().as_u16(), 206);
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
 
     let json_body = response
         .json::<TwoFactorAuthResponse>()

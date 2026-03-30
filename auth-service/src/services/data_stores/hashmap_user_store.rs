@@ -1,4 +1,4 @@
-use crate::domain::{Email, User, UserStore, UserStoreError};
+use crate::domain::{Email, HashedPassword, User, UserStore, UserStoreError};
 use secrecy::SecretString;
 use std::collections::HashMap;
 
@@ -74,7 +74,9 @@ mod tests {
 
         let user = User {
             email: Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
-            password: HashedPassword::parse("password".to_string()).await.unwrap(),
+            password: HashedPassword::parse(SecretString::new("password".into()))
+                .await
+                .unwrap(),
             requires_2fa: true,
         };
 
@@ -83,7 +85,7 @@ mod tests {
         let get_user_reslt = storage.get_user(&user.email).await;
         assert_eq!(get_user_reslt.is_ok(), true);
         let get_unexist_user_reslt = storage
-            .get_user(Email::parse("hacker@example.com".to_string()).unwrap())
+            .get_user(&Email::parse(SecretString::new("hacker@example.com".into())).unwrap())
             .await;
         assert_eq!(get_unexist_user_reslt, Err(UserStoreError::UserNotFound))
     }
@@ -93,8 +95,10 @@ mod tests {
         let mut storage = HashmapUserStore::default();
 
         let user = User {
-            email: Email::parse("admin@example.com".to_string()).unwrap(),
-            password: HashedPassword::parse("password".to_string()).await.unwrap(),
+            email: Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
+            password: HashedPassword::parse(SecretString::new("password".into()))
+                .await
+                .unwrap(),
             requires_2fa: true,
         };
 
@@ -103,8 +107,8 @@ mod tests {
         // User not found
         let not_found = storage
             .validate_user(
-                &Email::parse(SecretString::new("...".into())).unwrap(),
-                &SecretString::new("password".into()),
+                &Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
+                &SecretString::new("password1".into()),
             )
             .await;
 
@@ -120,8 +124,8 @@ mod tests {
         // everything is correct
         let correct = storage
             .validate_user(
-                Email::parse("admin@example.com".to_string()).unwrap(),
-                "password",
+                &Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
+                &SecretString::new("password".into()),
             )
             .await;
         assert_eq!(correct, Ok(()));

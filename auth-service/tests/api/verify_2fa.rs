@@ -4,6 +4,9 @@ use auth_service::{
     model::login::TwoFactorAuthResponse,
     utils::constants::JWT_COOKIE_NAME,
 };
+use secrecy::SecretString;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, ResponseTemplate};
 
 #[tokio::test]
 async fn should_return_401_if_incorrect_credentials() {
@@ -15,6 +18,13 @@ async fn should_return_401_if_incorrect_credentials() {
     }))
     .await;
 
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
     let login_body = app
         .post_login(&serde_json::json!({
             "email": random_email, "password": "password123",
@@ -23,6 +33,13 @@ async fn should_return_401_if_incorrect_credentials() {
         .json::<TwoFactorAuthResponse>()
         .await
         .unwrap();
+
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(2)
+        .mount(&app.email_server)
+        .await;
 
     let body = serde_json::json!({
         "email": random_email,
@@ -59,7 +76,7 @@ async fn should_return_401_if_old_code() {
     }))
     .await;
 
-    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str()))
+    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str())).unwrap();
     let store = app.two_fa_code_store.read().await;
     let (_, current_code) = store.get_code(&email).await.unwrap();
     drop(store);
@@ -93,7 +110,7 @@ async fn should_return_200_if_correct_code() {
         .await
         .unwrap();
 
-    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str()))
+    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str())).unwrap();
     let store = app.two_fa_code_store.read().await;
     let (_, code) = store.get_code(&email).await.unwrap();
     drop(store);
@@ -125,6 +142,13 @@ async fn should_return_401_if_same_code_twice() {
     }))
     .await;
 
+    Mock::given(path("/email"))
+        .and(method("POST"))
+        .respond_with(ResponseTemplate::new(200))
+        .expect(1)
+        .mount(&app.email_server)
+        .await;
+
     let login_body = app
         .post_login(&serde_json::json!({
             "email": random_email, "password": "password123",
@@ -134,7 +158,7 @@ async fn should_return_401_if_same_code_twice() {
         .await
         .unwrap();
 
-    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str()))
+    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str())).unwrap();
     let store = app.two_fa_code_store.read().await;
     let (_, code) = store.get_code(&email).await.unwrap();
     drop(store);

@@ -65,6 +65,7 @@ jobs:
         run: |
           export JWT_SECRET=secret
           export DATABASE_URL=postgres://postgres:${{ secrets.POSTGRES_PASSWORD }}@localhost:5432
+          export POSTMARK_AUTH_TOKEN=test_token
           cargo build --verbose
           cargo test --verbose
 
@@ -120,6 +121,7 @@ jobs:
             export JWT_SECRET=${{ secrets.JWT_SECRET }}
             export AUTH_SERVICE_IP=${{ vars.DROPLET_IP }}
             export POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            export POSTMARK_AUTH_TOKEN=${{ secrets.POSTMARK_AUTH_TOKEN }}
             docker-compose down
             docker-compose pull
             docker-compose up -d
