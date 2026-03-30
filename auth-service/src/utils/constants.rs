@@ -49,7 +49,7 @@ pub mod prod {
     pub const APP_ADDRESS: &str = "0.0.0.0:3000";
     pub mod email_client {
         pub const BASE_URL: &str = "https://api.postmarkapp.com";
-        pub const SENDER: &str = "bogdan@codeiron.io";
+        pub const SENDER: &str = "d@ngdb.io";
         pub const TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
     }
 }
