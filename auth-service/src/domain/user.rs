@@ -1,5 +1,7 @@
 use crate::domain::HashedPassword;
 use color_eyre::eyre::{eyre, Result};
+use secrecy::{ExposeSecret, SecretString};
+use std::hash::Hash;
 pub use validator::Validate;
 pub use validator::ValidationError;
 
@@ -7,36 +9,47 @@ pub enum EmailError {
     InvalidEmail,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Email(String);
-
 #[derive(Validate)]
 struct EmailValidator {
     #[validate(email)]
     email: String,
 }
 
-impl AsRef<str> for Email {
-    fn as_ref(&self) -> &str {
-        self.0.as_str()
+#[derive(Debug, Clone)]
+pub struct Email(SecretString);
+
+impl PartialEq for Email {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
+
+impl Eq for Email {}
+
+impl Hash for Email {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.expose_secret().hash(state);
+    }
+}
+
+impl AsRef<SecretString> for Email {
+    fn as_ref(&self) -> &SecretString {
+        &self.0
     }
 }
 
 impl Email {
-    pub fn parse(email: String) -> Result<Self> {
+    pub fn parse(email: SecretString) -> Result<Self> {
         let validator = EmailValidator {
-            email: email.clone(),
+            email: email.expose_secret().to_string(),
         };
 
         // Validate using the validator crate
         validator.validate().map_err(|_| eyre!("Invalid email"))?;
-
         Ok(Email(email))
     }
 }
 
-// The User struct should contain 3 fields. email, which is a String;
-// password, which is also a String; and requires_2fa, which is a boolean.
 #[derive(Clone, Debug, PartialEq)]
 pub struct User {
     pub email: Email,

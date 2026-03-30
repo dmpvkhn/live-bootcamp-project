@@ -157,12 +157,14 @@ pub fn get_random_email() -> String {
 }
 
 async fn configure_postgresql(db_name: &str) -> PgPool {
-    let postgresql_conn_url = DATABASE_URL.to_owned();
+    let postgresql_conn_url = DATABASE_URL.expose_secret().to_owned();
 
     configure_database(&postgresql_conn_url, &db_name).await;
-    get_postgres_pool(&format!("{}/{}", postgresql_conn_url, db_name))
-        .await
-        .expect("Failed to create Postgres connection pool!")
+    get_postgres_pool(&SecretString::new(
+        format!("{}/{}", postgresql_conn_url, db_name).into_boxed_str(),
+    ))
+    .await
+    .expect("Failed to create Postgres connection pool!")
 }
 
 async fn configure_database(db_conn_string: &str, db_name: &str) {

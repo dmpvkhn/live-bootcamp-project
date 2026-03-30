@@ -1,6 +1,6 @@
-use color_eyre::eyre::WrapErr;
-use color_eyre::Context;
+use color_eyre::eyre::Context;
 use redis::{Commands, Connection};
+use secrecy::{ExposeSecret, SecretString};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -22,13 +22,12 @@ impl RedisBannedTokenStore {
 #[async_trait::async_trait]
 impl BannedTokenStore for RedisBannedTokenStore {
     #[tracing::instrument(skip_all)]
-    async fn store_token(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
-        let key = get_key(&token);
+    async fn store_token(&mut self, token: SecretString) -> Result<(), BannedTokenStoreError> {
+        let key = get_key(token.expose_secret());
         let ttl: u64 = TOKEN_TTL_SECONDS
             .try_into()
             .wrap_err("failed to cast TOKEN_TTL_SECONDS to u64")
             .map_err(BannedTokenStoreError::UnexpectedError)?;
-
         self.conn
             .write()
             .await
@@ -37,13 +36,13 @@ impl BannedTokenStore for RedisBannedTokenStore {
             .map_err(BannedTokenStoreError::UnexpectedError)
     }
 
-    async fn is_banned(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
-        let key = get_key(token);
+    async fn is_banned(&self, token: &SecretString) -> Result<bool, BannedTokenStoreError> {
+        let key = get_key(token.expose_secret());
         self.conn
             .write()
             .await
             .exists(key)
-            .wrap_err("failed to set banned token in Redis")
+            .wrap_err("failed to check if token exists in Redis")
             .map_err(BannedTokenStoreError::UnexpectedError)
     }
 }

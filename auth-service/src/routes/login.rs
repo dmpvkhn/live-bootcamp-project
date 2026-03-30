@@ -2,9 +2,8 @@ use crate::domain::TwoFACodeStore;
 use axum::response::IntoResponse;
 use axum::{extract::State, http::StatusCode, Json};
 use axum_extra::extract::CookieJar;
-use color_eyre::eyre::eyre;
 
-use crate::domain::{AuthAPIError, Email, HashedPassword, LoginAttemptId, TwoFACode, UserStore};
+use crate::domain::{AuthAPIError, Email, LoginAttemptId, TwoFACode, UserStore};
 use crate::model::login::{LoginRequest, LoginResponse, TwoFactorAuthResponse};
 use crate::utils::auth::generate_auth_cookie;
 use crate::AppState;
@@ -23,15 +22,12 @@ pub async fn login(
 
     let user_store = &state.user_store.read().await;
 
-    match user_store
-        .validate_user(email.clone(), &request.password)
-        .await
-    {
+    match user_store.validate_user(&email, &request.password).await {
         Ok(_) => {}
         Err(_e) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
     }
 
-    let user = match user_store.get_user(email.clone()).await {
+    let user = match user_store.get_user(&email).await {
         Ok(u) => u,
         Err(_e) => return (jar, Err(AuthAPIError::IncorrectCredentials)),
     };

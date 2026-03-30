@@ -2,6 +2,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::Json;
+use secrecy::SecretString;
 
 use crate::domain::{AuthAPIError, BannedTokenStore, Email, UserStore};
 use crate::model::verifytoken::VerifyTokenRequest;
@@ -18,20 +19,28 @@ pub async fn verify_token(
         Err(_e) => return Err(AuthAPIError::InvalidToken),
     };
 
-    let email = Email::parse(t.sub).map_err(|_| AuthAPIError::MailformedToken)?;
+    let email = Email::parse(SecretString::new(t.sub.into_boxed_str()))
+        .map_err(|_| AuthAPIError::MailformedToken)?;
 
     if state
         .banned_token_store
         .read()
         .await
-        .is_banned(&request.token)
+        .is_banned(&SecretString::new(request.token.clone().into_boxed_str()))
         .await
         .map_err(|e| AuthAPIError::UnexpectedError(e.into()))?
     {
         return Err(AuthAPIError::InvalidToken);
     }
 
-    if state.user_store.read().await.get_user(email).await.is_err() {
+    if state
+        .user_store
+        .read()
+        .await
+        .get_user(&email)
+        .await
+        .is_err()
+    {
         return Err(AuthAPIError::InvalidToken);
     }
 

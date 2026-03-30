@@ -1,5 +1,6 @@
 use crate::domain::{BannedTokenStore, BannedTokenStoreError};
-use color_eyre::eyre;
+use secrecy::{ExposeSecret, SecretString};
+
 use std::collections::HashSet;
 
 #[derive(Default)]
@@ -8,16 +9,11 @@ pub struct HashmapBannedTokenStore {
 }
 #[async_trait::async_trait]
 impl BannedTokenStore for HashmapBannedTokenStore {
-    async fn store_token(&mut self, token: String) -> Result<(), BannedTokenStoreError> {
-        if !self.tokens.insert(token) {
-            Err(BannedTokenStoreError::UnexpectedError(eyre::eyre!(
-                "token already exists"
-            )))
-        } else {
-            Ok(())
-        }
+    async fn store_token(&mut self, token: SecretString) -> Result<(), BannedTokenStoreError> {
+        self.tokens.insert(token.expose_secret().to_owned());
+        Ok(())
     }
-    async fn is_banned(&self, token: &str) -> Result<bool, BannedTokenStoreError> {
-        Ok(self.tokens.contains(token))
+    async fn is_banned(&self, token: &SecretString) -> Result<bool, BannedTokenStoreError> {
+        Ok(self.tokens.contains(token.expose_secret()))
     }
 }

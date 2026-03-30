@@ -1,3 +1,4 @@
+use secrecy::SecretString;
 use serde::{Deserialize, Serialize};
 
 // The login route can return 2 possible success responses.
@@ -17,10 +18,10 @@ pub struct TwoFactorAuthResponse {
     pub login_attempt_id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct LoginRequest {
-    pub email: String,
-    pub password: String,
+    pub email: SecretString,
+    pub password: SecretString,
 }
 
 #[derive(Serialize, Deserialize, Debug)]

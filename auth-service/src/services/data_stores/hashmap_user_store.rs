@@ -1,6 +1,6 @@
+use crate::domain::{Email, User, UserStore, UserStoreError};
+use secrecy::SecretString;
 use std::collections::HashMap;
-
-use crate::domain::{Email, HashedPassword, User, UserStore, UserStoreError};
 
 // TODO: Create a new struct called `HashmapUserStore` containing a `users` field
 // which stores a `HashMap`` of email `String`s mapped to `User` objects.
@@ -22,15 +22,19 @@ impl UserStore for HashmapUserStore {
         }
     }
 
-    async fn get_user(&self, email: Email) -> Result<User, UserStoreError> {
-        match self.users.get(&email) {
+    async fn get_user(&self, email: &Email) -> Result<User, UserStoreError> {
+        match self.users.get(email) {
             Some(u) => Ok(u.clone()),
             None => Err(UserStoreError::UserNotFound),
         }
     }
 
-    async fn validate_user(&self, email: Email, raw_password: &str) -> Result<(), UserStoreError> {
-        let user = self.users.get(&email).ok_or(UserStoreError::UserNotFound)?;
+    async fn validate_user(
+        &self,
+        email: &Email,
+        raw_password: &SecretString,
+    ) -> Result<(), UserStoreError> {
+        let user = self.users.get(email).ok_or(UserStoreError::UserNotFound)?;
         user.password
             .verify_raw_password(raw_password)
             .await
@@ -42,6 +46,7 @@ impl UserStore for HashmapUserStore {
 #[cfg(test)]
 mod tests {
     use crate::domain::Email;
+    use secrecy::SecretString;
 
     use super::*;
 
@@ -50,8 +55,10 @@ mod tests {
         let mut storage = HashmapUserStore::default();
 
         let user = User {
-            email: Email::parse("admin@exmple.com".to_string()).unwrap(),
-            password: HashedPassword::parse("password".to_string()).await.unwrap(),
+            email: Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
+            password: HashedPassword::parse(SecretString::new("password".into()))
+                .await
+                .unwrap(),
             requires_2fa: true,
         };
 
@@ -66,16 +73,14 @@ mod tests {
         let mut storage = HashmapUserStore::default();
 
         let user = User {
-            email: Email::parse("admin@example.com".to_string()).unwrap(),
+            email: Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
             password: HashedPassword::parse("password".to_string()).await.unwrap(),
             requires_2fa: true,
         };
 
         let _ = storage.add_user(user.clone()).await;
 
-        let get_user_reslt = storage
-            .get_user(Email::parse("admin@example.com".to_string()).unwrap())
-            .await;
+        let get_user_reslt = storage.get_user(&user.email).await;
         assert_eq!(get_user_reslt.is_ok(), true);
         let get_unexist_user_reslt = storage
             .get_user(Email::parse("hacker@example.com".to_string()).unwrap())
@@ -98,10 +103,11 @@ mod tests {
         // User not found
         let not_found = storage
             .validate_user(
-                Email::parse("hacker@example.com".to_string()).unwrap(),
-                "password",
+                &Email::parse(SecretString::new("...".into())).unwrap(),
+                &SecretString::new("password".into()),
             )
             .await;
+
         assert_eq!(not_found, Err(UserStoreError::UserNotFound));
         // Password is wrong
         let wrong_password = storage

@@ -11,6 +11,7 @@ use axum::{
 };
 use domain::AuthAPIError;
 use redis::{Client, RedisResult};
+use secrecy::{ExposeSecret, SecretString};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgPoolOptions, PgPool};
 use tokio::net::TcpListener;
@@ -24,11 +25,8 @@ use tower_http::trace::TraceLayer;
 use utils::tracing::{make_span_with_request_id, on_request, on_response};
 
 use crate::{
-    domain::{BannedTokenStore, EmailClient},
-    services::{
-        hashmap_two_fa_code_store::HashmapTwoFACodeStore, hashmap_user_store::HashmapUserStore,
-        HashmapBannedTokenStore, PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore,
-    },
+    domain::EmailClient,
+    services::{PostgresUserStore, RedisBannedTokenStore, RedisTwoFACodeStore},
 };
 
 // Using a type alias to improve readability!
@@ -148,9 +146,12 @@ impl IntoResponse for AuthAPIError {
     }
 }
 
-pub async fn get_postgres_pool(url: &str) -> Result<PgPool, sqlx::Error> {
+pub async fn get_postgres_pool(url: &SecretString) -> Result<PgPool, sqlx::Error> {
     // Create a new PostgreSQL connection pool
-    PgPoolOptions::new().max_connections(5).connect(url).await
+    PgPoolOptions::new()
+        .max_connections(5)
+        .connect(url.expose_secret())
+        .await
 }
 
 pub fn get_redis_client(redis_hostname: String) -> RedisResult<Client> {

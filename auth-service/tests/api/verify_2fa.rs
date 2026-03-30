@@ -59,7 +59,7 @@ async fn should_return_401_if_old_code() {
     }))
     .await;
 
-    let email = Email::parse(random_email.clone()).unwrap();
+    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str()))
     let store = app.two_fa_code_store.read().await;
     let (_, current_code) = store.get_code(&email).await.unwrap();
     drop(store);
@@ -93,7 +93,7 @@ async fn should_return_200_if_correct_code() {
         .await
         .unwrap();
 
-    let email = Email::parse(random_email.clone()).unwrap();
+    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str()))
     let store = app.two_fa_code_store.read().await;
     let (_, code) = store.get_code(&email).await.unwrap();
     drop(store);
@@ -134,7 +134,7 @@ async fn should_return_401_if_same_code_twice() {
         .await
         .unwrap();
 
-    let email = Email::parse(random_email.clone()).unwrap();
+    let email = Email::parse(SecretString::new(random_email.clone().into_boxed_str()))
     let store = app.two_fa_code_store.read().await;
     let (_, code) = store.get_code(&email).await.unwrap();
     drop(store);

@@ -3,6 +3,7 @@ use auth_service::domain::TwoFACodeStore;
 use auth_service::{
     model::login::TwoFactorAuthResponse, utils::constants::JWT_COOKIE_NAME, ErrorResponse,
 };
+use secrecy::SecretString;
 
 #[tokio::test]
 async fn should_return_422_if_malformed_credentials() {
@@ -129,7 +130,11 @@ async fn should_return_206_if_valid_credentials_and_2fa_enabled() {
 
     assert_eq!(json_body.message, "2FA required".to_owned());
 
-    let email = auth_service::domain::Email::parse(random_email).unwrap();
+    let email = auth_service::domain::Email::parse(SecretString::new(
+        random_email.clone().into_boxed_str(),
+    ))
+    .unwrap();
+
     let store = app.two_fa_code_store.read().await;
     let (stored_id, _) = store
         .get_code(&email)

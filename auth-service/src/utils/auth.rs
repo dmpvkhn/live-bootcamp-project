@@ -3,6 +3,7 @@ use chrono::Utc;
 use color_eyre::eyre::ContextCompat;
 use color_eyre::eyre::{eyre, Context, Result};
 use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Validation};
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 
 use crate::{domain::Email, utils::constants::JWT_SECRET};
@@ -46,7 +47,7 @@ fn generate_auth_token(email: &Email) -> Result<String> {
     // Cast exp to a usize, which is what Claims expects
     let exp: usize = exp.try_into()?;
 
-    let sub = email.as_ref().to_owned();
+    let sub = email.as_ref().expose_secret().to_owned();
 
     let claims = Claims { sub, exp };
 
@@ -58,7 +59,7 @@ fn generate_auth_token(email: &Email) -> Result<String> {
 pub async fn validate_token(token: &str) -> Result<Claims> {
     decode::<Claims>(
         token,
-        &DecodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &DecodingKey::from_secret(JWT_SECRET.expose_secret().as_bytes()),
         &Validation::default(),
     )
     .map(|data| data.claims)
@@ -71,7 +72,7 @@ fn create_token(claims: &Claims) -> Result<String> {
     encode(
         &jsonwebtoken::Header::default(),
         &claims,
-        &EncodingKey::from_secret(JWT_SECRET.as_bytes()),
+        &EncodingKey::from_secret(JWT_SECRET.expose_secret().as_bytes()),
     )
     .wrap_err("failed to create token")
 }

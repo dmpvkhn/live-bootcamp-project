@@ -2,60 +2,66 @@ use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Algorithm, Argon2, Params, PasswordHash, PasswordHasher, PasswordVerifier, Version,
 };
-use color_eyre::eyre::{Context, Result};
-use std::error::Error;
+use color_eyre::eyre::{eyre, Context, Result};
+use secrecy::{ExposeSecret, SecretString};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct HashedPassword(String);
+#[derive(Debug, Clone)]
+pub struct HashedPassword(SecretString);
+
+impl PartialEq for HashedPassword {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.expose_secret() == other.0.expose_secret()
+    }
+}
 
 impl HashedPassword {
-    pub async fn parse(s: String) -> Result<Self> {
-        if s.len() < 8 {
-            return Err(color_eyre::eyre::eyre!("Password is too short or empty"));
+    pub async fn parse(s: SecretString) -> Result<Self> {
+        if !validate_password(&s) {
+            return Err(eyre!("Password is too short or empty"));
         }
-
         let hash = compute_password_hash(&s)
             .await
             .wrap_err("failed to compute password hash")?;
-
         Ok(HashedPassword(hash))
     }
 
-    pub fn parse_password_hash(hash: String) -> Result<HashedPassword, String> {
-        PasswordHash::new(&hash).map_err(|e| e.to_string())?;
+    pub fn parse_password_hash(hash: SecretString) -> Result<HashedPassword> {
+        PasswordHash::new(hash.expose_secret()).map_err(|e| eyre!(e.to_string()))?;
         Ok(HashedPassword(hash))
     }
 
     #[tracing::instrument(name = "Verify raw password", skip_all)]
-    pub async fn verify_raw_password(
-        &self,
-        password_candidate: &str,
-    ) -> Result<(), Box<dyn Error + Send + Sync>> {
+    pub async fn verify_raw_password(&self, password_candidate: &SecretString) -> Result<()> {
         let current_span: tracing::Span = tracing::Span::current();
-        let password_hash = self.as_ref().to_owned();
-        let password_candidate = password_candidate.to_owned();
+        let password_hash = self.0.expose_secret().to_owned();
+        let password_candidate = password_candidate.expose_secret().to_owned();
         tokio::task::spawn_blocking(move || {
             current_span.in_scope(|| {
-                let expected_password_hash = PasswordHash::new(&password_hash)?;
+                let expected_password_hash =
+                    PasswordHash::new(&password_hash).wrap_err("failed to parse password hash")?;
                 Argon2::default()
                     .verify_password(password_candidate.as_bytes(), &expected_password_hash)
-                    .map_err(|e| e.into())
+                    .wrap_err("failed to verify password")
             })
         })
         .await?
     }
 }
 
-impl AsRef<str> for HashedPassword {
-    fn as_ref(&self) -> &str {
+impl AsRef<SecretString> for HashedPassword {
+    fn as_ref(&self) -> &SecretString {
         &self.0
     }
 }
 
+fn validate_password(s: &SecretString) -> bool {
+    s.expose_secret().len() >= 8
+}
+
 #[tracing::instrument(name = "Computing password hash", skip_all)]
-async fn compute_password_hash(password: &str) -> Result<String> {
+async fn compute_password_hash(password: &SecretString) -> Result<SecretString> {
     let current_span: tracing::Span = tracing::Span::current();
-    let password = password.to_owned();
+    let password = password.expose_secret().to_owned();
     tokio::task::spawn_blocking(move || {
         current_span.in_scope(|| {
             let salt = SaltString::generate(&mut OsRng);
@@ -66,7 +72,7 @@ async fn compute_password_hash(password: &str) -> Result<String> {
             )
             .hash_password(password.as_bytes(), &salt)?
             .to_string();
-            Ok(hash)
+            Ok(SecretString::new(hash.into_boxed_str()))
         })
     })
     .await?
