@@ -1,4 +1,4 @@
-use crate::domain::{Email, HashedPassword, User, UserStore, UserStoreError};
+use crate::domain::{Email, User, UserStore, UserStoreError};
 use secrecy::SecretString;
 use std::collections::HashMap;
 
@@ -107,8 +107,8 @@ mod tests {
         // User not found
         let not_found = storage
             .validate_user(
-                &Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
-                &SecretString::new("password1".into()),
+                &Email::parse(SecretString::new("unknown@example.com".into())).unwrap(),
+                &SecretString::new("password".into()),
             )
             .await;
 
@@ -116,8 +116,8 @@ mod tests {
         // Password is wrong
         let wrong_password = storage
             .validate_user(
-                Email::parse("admin@example.com".to_string()).unwrap(),
-                "password1",
+                &Email::parse(SecretString::new("admin@example.com".into())).unwrap(),
+                &SecretString::new("password1".into()),
             )
             .await;
         assert_eq!(wrong_password, Err(UserStoreError::InvalidCredentials));

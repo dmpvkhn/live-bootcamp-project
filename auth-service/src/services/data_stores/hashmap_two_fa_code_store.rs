@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-
 use async_trait::async_trait;
 use color_eyre::eyre::eyre;
+use secrecy::SecretString;
+use std::collections::HashMap;
 
 use crate::domain::{
     Email, {LoginAttemptId, TwoFACode, TwoFACodeStore, TwoFACodeStoreError},
@@ -51,7 +51,7 @@ mod tests {
     use crate::domain::{Email, LoginAttemptId, TwoFACode};
 
     fn email() -> Email {
-        Email::parse("test@example.com".to_string()).unwrap()
+        Email::parse(SecretString::new("test@example.com".into())).unwrap()
     }
 
     #[tokio::test]
